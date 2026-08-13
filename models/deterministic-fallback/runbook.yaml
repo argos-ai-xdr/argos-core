@@ -1,0 +1,20 @@
+# Versión de datos del runbook hardcodeado en
+# services/recommendation/_RUNBOOK_BY_SEVERITY. Hoy el código es la fuente
+# real (más simple para el bootstrap); esta es la forma hacia la que migrar
+# cuando el runbook lo mantenga SOC/Cyber en vez de un desarrollador
+# (ARG-019) — deben mantenerse en sincronía manualmente mientras tanto.
+severities:
+  critical:
+    - action: isolate_kubernetes_workload
+      description: "Aplicar CiliumNetworkPolicy temporal de aislamiento"
+    - action: scale_to_zero
+      description: "Escalar a cero el deployment afectado"
+  high:
+    - action: isolate_kubernetes_workload
+      description: "Aplicar CiliumNetworkPolicy temporal de aislamiento"
+  medium:
+    - action: increase_monitoring
+      description: "Elevar verbosidad de logging/telemetría del activo afectado"
+  low:
+    - action: log_only
+      description: "Registrar para revisión periódica, sin acción de contención"

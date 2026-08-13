@@ -1,0 +1,17 @@
+name: argos-core
+domain: xdr-runtime
+criticality: critical
+owner: xdr-data
+backup_owner: poa-architecture
+classification: internal
+lifecycle: active
+artifacts:
+  - container-images
+  - python-packages
+dependencies:
+  - argos-contracts-scenarios
+consumed_by:
+  - argos-smartops
+  - argos-cyber-tools
+  - argos-validation
+proposal_source: ARGOS_Propuesta_Tecnica_Maestro_Vivo_v0.5.docx

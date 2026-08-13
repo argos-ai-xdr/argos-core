@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local overrides — never commit
+.env
+.env.*
+*.local.yaml
+secrets/
+
+# Evidencia/reportes generados por un run — no versionar (ADR-016)
+run_summary.json
+evidence/
+reports/generated/

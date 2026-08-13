@@ -1,0 +1,15 @@
+# TODO (ARG-015): fijar image.repository/tag/digest reales cuando exista
+# el pipeline de build (reusable-container-build.yaml + reusable-sbom-sign.yaml
+# de argos-control). Sin digest fijado, este chart no se despliega (ADR-013).
+image:
+  repository: "" # TODO: registry/argos/normalizer
+  digest: ""      # TODO: sha256:...
+replicas: 1
+namespace: argos-xdr
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

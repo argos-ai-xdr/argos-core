@@ -1,0 +1,13 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python-ci:
+    uses: argos-ai-xdr/argos-control/.github/workflows/reusable-python-ci.yaml@main
+    with:
+      working-directory: "."
+      contracts-ref: "main"
