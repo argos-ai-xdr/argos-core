@@ -66,3 +66,28 @@ def test_incident_evidence_refs_point_to_member_envelope_ids(contracts_path, con
     events = [_event("e1", "a1", "2026-08-12T10:00:00Z", "high")]
     incident = build_incident_payload(contracts_path, context, events)
     assert incident["evidence_refs"] == ["env-e1"]
+
+
+def test_incident_entities_deduplicate_same_asset(contracts_path, context):
+    """Regresión: entities listaba la misma entidad una vez por cada evento
+    miembro, en vez de una vez por asset. group_by_asset_and_window agrupa
+    precisamente por asset_id, así que el caso normal — no el raro — es que
+    varios eventos miembro compartan asset_id (3 eventos del mismo asset
+    producían 3 entidades idénticas)."""
+    events = [
+        _event("e1", "a1", "2026-08-12T10:00:00Z", "high"),
+        _event("e2", "a1", "2026-08-12T10:00:30Z", "medium"),
+        _event("e3", "a1", "2026-08-12T10:01:00Z", "low"),
+    ]
+    incident = build_incident_payload(contracts_path, context, events)
+    assert incident["entities"] == [{"type": "asset", "id": "a1"}]
+
+
+def test_incident_entities_include_each_distinct_asset_once(contracts_path, context):
+    events = [
+        _event("e1", "a1", "2026-08-12T10:00:00Z", "high"),
+        _event("e2", "a2", "2026-08-12T10:00:01Z", "high"),
+        _event("e3", "a1", "2026-08-12T10:00:02Z", "high"),
+    ]
+    incident = build_incident_payload(contracts_path, context, events)
+    assert incident["entities"] == [{"type": "asset", "id": "a1"}, {"type": "asset", "id": "a2"}]

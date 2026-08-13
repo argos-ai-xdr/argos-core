@@ -78,7 +78,15 @@ def build_incident_payload(
         {"timestamp": e["observed_at"], "description": f"{e['source']}: {e.get('event_id')}"}
         for e in member_events
     ]
-    entities = [{"type": "asset", "id": e["asset_id"]} for e in member_events if e.get("asset_id")]
+    # dict.fromkeys, no una list comprehension directa: group_by_asset_and_window
+    # agrupa precisamente por asset_id, así que el caso normal (no el raro)
+    # es que TODOS los eventos miembro compartan el mismo asset_id — sin
+    # deduplicar, un incidente con 5 eventos del mismo asset listaba esa
+    # misma entidad 5 veces (visible en argos-smartops como
+    # affected_assets repetido). dict.fromkeys conserva el orden de
+    # primera aparición, a diferencia de un set.
+    seen_asset_ids = dict.fromkeys(e["asset_id"] for e in member_events if e.get("asset_id"))
+    entities = [{"type": "asset", "id": asset_id} for asset_id in seen_asset_ids]
     severity = max(
         (e.get("severity_normalized", "low") for e in member_events),
         key=lambda s: _SEVERITY_ORDER.get(s, 0),
