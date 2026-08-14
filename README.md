@@ -10,7 +10,7 @@ Stack: Python, FastAPI, Pydantic, NATS, OpenTelemetry (ver `argos-control` — "
 
 | Carpeta | Contenido |
 | --- | --- |
-| `services/` | Los nueve servicios (uno por responsabilidad; ver tabla abajo) |
+| `services/` | Los diez servicios (uno por responsabilidad; ver tabla abajo) |
 | `libs/` | Librerías internas versionadas compartidas entre servicios |
 | `connectors/` | Adaptadores hacia sistemas externos (NetBox, CMAM, Trivy, Wazuh, MISP, ...) |
 | `models/` | Prompts, salida estructurada, fallback determinista, config de evaluación |
@@ -30,6 +30,7 @@ Stack: Python, FastAPI, Pydantic, NATS, OpenTelemetry (ver `argos-control` — "
 | `policy-adapter` | Cliente hacia OPA (`argos-cyber-tools`) | Interfaz + fake en memoria |
 | `evidence-writer` | Construye `EvidenceManifest`, hashea artefactos | Lógica real |
 | `soc-adapter` | Filtra por TLP, construye `SOCHandover` | Lógica real |
+| `dmz-detector` | ARG-018 (C-08.UC5): anomalías DMZ/egress por reglas + baseline; emite `RawEvent` hacia `normalizer` | Lógica real |
 
 ## Nota de nombres de paquete
 
