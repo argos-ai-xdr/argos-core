@@ -1,5 +1,5 @@
-"""independent_verifier: Independent Verification Barrier (ADR-021,
-ADR-017 Fase H; prompt maestro de arquitectura objetivo, "INDEPENDENT
+"""independent_verifier: Independent Verification Barrier (ADR-055,
+ADR-051 Fase H; prompt maestro de arquitectura objetivo, "INDEPENDENT
 VERIFICATION BARRIER").
 
 Situado entre SafetyEnvelope y OPA/PolicyDecision. No generativo. A
@@ -150,12 +150,12 @@ def decide_state(checks: tuple[VerificationCheck, ...]) -> tuple[VerificationSta
     violated = [c for c in checks if c.passed is False]
     if violated:
         names = ", ".join(c.name for c in violated)
-        return "REJECTED", f"REJECTED: {names} (ZERO EXECUTE, ADR-021)"
+        return "REJECTED", f"REJECTED: {names} (ZERO EXECUTE, ADR-055)"
 
     unevaluated = [c for c in checks if c.passed is None]
     if unevaluated:
         names = ", ".join(c.name for c in unevaluated)
-        return "INCONCLUSIVE", f"INCONCLUSIVE: {names} no se pudo re-confirmar (ZERO EXECUTE, ADR-021)"
+        return "INCONCLUSIVE", f"INCONCLUSIVE: {names} no se pudo re-confirmar (ZERO EXECUTE, ADR-055)"
 
     return "VERIFIED", "VERIFIED — todas las comprobaciones independientes se reconfirmaron con hechos frescos"
 

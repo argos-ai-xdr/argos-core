@@ -1,6 +1,6 @@
 # safety-kernel
 
-ADR-020, ADR-017 (Fase H). Deterministic Safety Kernel entre
+ADR-054, ADR-051 (Fase H). Deterministic Safety Kernel entre
 `recommendation` y `policy-adapter` (prompt maestro de arquitectura
 objetivo, "SOVEREIGN SAFETY KERNEL"). Nunca decide autorización — eso
 sigue siendo de OPA/HITL — y **SAFE_TO_EVALUATE ≠ APPROVED**: solo

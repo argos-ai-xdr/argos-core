@@ -1,13 +1,13 @@
 # evidence-root
 
-ADR-023, ADR-017 (Fase J). Cierra el linaje `Run/Action/Verification →
+ADR-057, ADR-051 (Fase J). Cierra el linaje `Run/Action/Verification →
 EvidenceManifest → EvidenceRoot → Transparency record` sobre evidencia
 ya real (`evidence_writer`), sin fabricar infraestructura criptográfica
 o de transparencia externa que no existe.
 
 | Módulo | Rol |
 | --- | --- |
-| [`__init__.py`](__init__.py) | `EvidenceRoot`: agregador determinista de `EvidenceManifest` reales — hash agregado (no Merkle, ver ADR-023), orden de entrada irrelevante, detecta duplicados conflictivos y artefactos ausentes |
+| [`__init__.py`](__init__.py) | `EvidenceRoot`: agregador determinista de `EvidenceManifest` reales — hash agregado (no Merkle, ver ADR-057), orden de entrada irrelevante, detecta duplicados conflictivos y artefactos ausentes |
 | [`transparency_log.py`](transparency_log.py) | `TransparencyLog`: append-only local con hash-chain real (`previous_entry_hash`), `TransparencyReceipt` sin firma |
 | [`replay.py`](replay.py) | Reconstrucción/verificación: `VERIFIED / INCOMPLETE / HASH_MISMATCH / BROKEN_CHAIN / MISSING_ARTIFACT` |
 
@@ -39,7 +39,7 @@ o de transparencia externa que no existe.
 * **Merkle tree**: decisión explícita de NO construirlo — ningún
   contrato lo exige, y el precedente ya establecido en este mismo
   proyecto (`argos-validation/harness/acceptance.py::seal_report`) usa
-  hash agregado simple. Ver ADR-023.
+  hash agregado simple. Ver ADR-057.
 * **Object-lock/WORM real** en el storage: Ceph RGW no está desplegado
   (ARG-026); la garantía "tamper-evident" de este módulo es lógica, no
   de almacenamiento.

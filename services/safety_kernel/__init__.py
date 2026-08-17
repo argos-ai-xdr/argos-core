@@ -1,4 +1,4 @@
-"""safety_kernel: Deterministic Safety Kernel (ADR-020, ADR-017 Fase H;
+"""safety_kernel: Deterministic Safety Kernel (ADR-054, ADR-051 Fase H;
 prompt maestro de arquitectura objetivo, "SOVEREIGN SAFETY KERNEL").
 
 Situado entre Recommendation y OPA/PolicyDecision. Determinista y NO
@@ -180,7 +180,7 @@ def _run_checks(inp: SafetyCheckInput, *, contracts_path, registry) -> tuple[Saf
         SafetyCheck(
             "no_prohibited_action",
             no_prohibited_action,
-            f"side_effect_class={inp.side_effect_class!r} ({'permitido' if no_prohibited_action else 'DENY incondicional, ADR-019'})",
+            f"side_effect_class={inp.side_effect_class!r} ({'permitido' if no_prohibited_action else 'DENY incondicional, ADR-053'})",
         ),
     )
 
@@ -252,7 +252,7 @@ def decide_state(checks: tuple[SafetyCheck, ...]) -> tuple[SafetyKernelState, st
     violated = [c for c in checks if c.passed is False]
     if violated:
         names = ", ".join(c.name for c in violated)
-        return "BLOCKED", f"BLOCKED: {names} (fail-closed, ADR-020)"
+        return "BLOCKED", f"BLOCKED: {names} (fail-closed, ADR-054)"
 
     unevaluated = [c for c in checks if c.passed is None]
     if unevaluated:

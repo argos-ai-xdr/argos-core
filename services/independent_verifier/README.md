@@ -1,6 +1,6 @@
 # independent-verifier
 
-ADR-021, ADR-017 (Fase H). Independent Verification Barrier entre
+ADR-055, ADR-051 (Fase H). Independent Verification Barrier entre
 `safety_kernel` y `policy-adapter` (prompt maestro de arquitectura
 objetivo, "INDEPENDENT VERIFICATION BARRIER"). No generativo.
 
@@ -50,6 +50,6 @@ conocida (`REJECTED`) o un hecho que no se pudo reconfirmar
   artefacto interno de `argos-core`, igual que `ReplayCapsule` en
   `argos-validation`: nada lo consume todavía fuera de este repo, así
   que formalizarlo como contrato v1 cross-repo sería prematuro (mismo
-  criterio que ADR-017 aplica a "no scaffolding vacío").
+  criterio que ADR-051 aplica a "no scaffolding vacío").
 * No re-ejecuta el tool ni simula su efecto (eso sería Security Digital
   Twin, que no existe).

@@ -27,11 +27,11 @@ Stack: Python, FastAPI, Pydantic, NATS, OpenTelemetry (ver `argos-control` — "
 | `risk-engine` | Ranking explicable (exposición, criticidad, KEV, EPSS) | Lógica real |
 | `correlator` | Construye `Incident`, separa hecho de inferencia | Lógica real |
 | `recommendation` | Fallback determinista real; LangGraph/vLLM documentado, no implementado (ADR-008) | Parcial |
-| `safety-kernel` | ADR-020 (Fase H): Deterministic Safety Kernel entre `recommendation` y `policy-adapter`; produce `SafetyEnvelope` | Lógica real; SAFE_TO_EVALUATE no alcanzable hoy (3/14 checks dependen de subsistemas que no existen) |
-| `independent-verifier` | ADR-021 (Fase H): Independent Verification Barrier entre `safety-kernel` y `policy-adapter`; re-confirma el `SafetyEnvelope` con hechos frescos | Lógica real; VERIFIED no alcanzable hoy (Mission Context no existe) |
+| `safety-kernel` | ADR-054 (Fase H): Deterministic Safety Kernel entre `recommendation` y `policy-adapter`; produce `SafetyEnvelope` | Lógica real; SAFE_TO_EVALUATE no alcanzable hoy (3/14 checks dependen de subsistemas que no existen) |
+| `independent-verifier` | ADR-055 (Fase H): Independent Verification Barrier entre `safety-kernel` y `policy-adapter`; re-confirma el `SafetyEnvelope` con hechos frescos | Lógica real; VERIFIED no alcanzable hoy (Mission Context no existe) |
 | `policy-adapter` | Cliente hacia OPA (`argos-cyber-tools`) | Interfaz + fake en memoria |
 | `evidence-writer` | Construye `EvidenceManifest`, hashea artefactos | Lógica real |
-| `evidence-root` | ADR-023 (Fase J): agrega `EvidenceManifest` en `EvidenceRoot` determinista + `TransparencyLog` local con hash-chain + replay/reconstrucción | Lógica real, local (`LOGICALLY_APPEND_ONLY/TAMPER_EVIDENT`, no `IMMUTABLE`); sin firma real (sin PKI) |
+| `evidence-root` | ADR-057 (Fase J): agrega `EvidenceManifest` en `EvidenceRoot` determinista + `TransparencyLog` local con hash-chain + replay/reconstrucción | Lógica real, local (`LOGICALLY_APPEND_ONLY/TAMPER_EVIDENT`, no `IMMUTABLE`); sin firma real (sin PKI) |
 | `soc-adapter` | Filtra por TLP, construye `SOCHandover` | Lógica real |
 | `dmz-detector` | ARG-018 (C-08.UC5): anomalías DMZ/egress por reglas + baseline; emite `RawEvent` hacia `normalizer` | Lógica real |
 

@@ -1,5 +1,5 @@
 """transparency_log: registro append-only local con hash-chain real
-(ADR-023, ADR-017 Fase J; prompt maestro de arquitectura objetivo,
+(ADR-057, ADR-051 Fase J; prompt maestro de arquitectura objetivo,
 "APPEND-ONLY TRANSPARENCY LOG"). CLAIM-010 de `argos-control/assurance/
 argos-assurance.yaml` — cierra ese `NOT_SUPPORTED` en el ámbito local.
 

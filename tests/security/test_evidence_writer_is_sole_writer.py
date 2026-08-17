@@ -1,5 +1,5 @@
 """Chequeo estático real (ADR-006/ADR-016: evidence_writer es la única
-escritura permitida al evidence store; ADR-023 extiende la misma regla a
+escritura permitida al evidence store; ADR-057 extiende la misma regla a
 evidence_root/transparency_log): ningún otro módulo de services/
 construye una referencia ceph:// directamente, ni expone una forma de
 borrar o reescribir una entrada de evidencia/transparencia ya creada.
@@ -26,7 +26,7 @@ def test_no_service_other_than_evidence_writer_references_ceph_directly():
 
 
 def test_transparency_log_has_no_public_delete_or_edit_method():
-    """Fase J (ADR-023): ningún agente puede modificar o borrar
+    """Fase J (ADR-057): ningún agente puede modificar o borrar
     evidencia/transparencia histórica -- la API pública de TransparencyLog
     no debe crecer nunca un método delete/remove/edit/update/clear."""
     forbidden_substrings = ("delete", "remove", "edit", "update", "clear", "truncate", "overwrite")

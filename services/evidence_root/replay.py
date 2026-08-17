@@ -1,6 +1,6 @@
 """replay: reconstrucción y verificación de un run a partir de
 `run_id` + `EvidenceManifest`(s) + `EvidenceRoot` + entradas de
-`TransparencyLog` (ADR-023, ADR-017 Fase J; prompt maestro de
+`TransparencyLog` (ADR-057, ADR-051 Fase J; prompt maestro de
 arquitectura objetivo, "Replay y reconstrucción").
 
 Determinista, no generativo: nunca infiere qué "probablemente" pasó,

@@ -101,7 +101,7 @@ def test_zero_execute_false_for_verified():
 
 
 def test_verify_with_every_fact_confirmed_is_inconclusive_not_verified():
-    """Igual que safety_kernel (ADR-020): incluso con TODOS los hechos
+    """Igual que safety_kernel (ADR-054): incluso con TODOS los hechos
     independientes confirmados, mission_constraints_respected sigue
     siendo None (Mission Context no existe) — VERIFIED nunca es
     alcanzable por ningún checkout real de hoy, solo por decide_state()
@@ -261,7 +261,7 @@ def test_verify_uses_real_safety_kernel_envelope_end_to_end(contracts_path, cont
     )
     sk_decision = evaluate(sk_input, contracts_path=contracts_path, context=context)
     # El propio safety_kernel nunca llega a SAFE_TO_EVALUATE hoy (ver
-    # ADR-020) -- para probar independent_verifier igualmente contra un
+    # ADR-054) -- para probar independent_verifier igualmente contra un
     # envelope real, se construye uno directamente con la pieza interna
     # que evaluate() usaría si alcanzara ese estado.
     from safety_kernel import _build_envelope_payload, _run_checks
@@ -269,7 +269,7 @@ def test_verify_uses_real_safety_kernel_envelope_end_to_end(contracts_path, cont
     checks = _run_checks(sk_input, contracts_path=contracts_path, registry=__import__("argos_testing").build_registry(contracts_path))
     envelope = _build_envelope_payload(sk_input, checks)
 
-    assert sk_decision.state == "INCONCLUSIVE"  # confirma el comportamiento honesto documentado en ADR-020
+    assert sk_decision.state == "INCONCLUSIVE"  # confirma el comportamiento honesto documentado en ADR-054
 
     verifier_input = VerificationCheckInput(
         envelope=envelope,
@@ -283,5 +283,5 @@ def test_verify_uses_real_safety_kernel_envelope_end_to_end(contracts_path, cont
         observed_blast_radius_count=1,
     )
     decision = verify(verifier_input)
-    assert decision.state == "INCONCLUSIVE"  # mission_constraints_respected sigue None, ver ADR-021
+    assert decision.state == "INCONCLUSIVE"  # mission_constraints_respected sigue None, ver ADR-055
     assert decision.zero_execute is True

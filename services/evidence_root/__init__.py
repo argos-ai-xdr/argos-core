@@ -1,5 +1,5 @@
 """evidence_root: agregador determinista de EvidenceManifest ya reales
-(ADR-023, ADR-017 Fase J; prompt maestro de arquitectura objetivo,
+(ADR-057, ADR-051 Fase J; prompt maestro de arquitectura objetivo,
 "EvidenceRoot").
 
 **Decisión de diseño (sin Merkle)**: ningún contrato existente de este
@@ -8,7 +8,7 @@ en `argos-validation/harness/acceptance.py::seal_report` usa un hash
 agregado determinista sobre JSON canónico — este módulo sigue el MISMO
 mecanismo (`sort_keys=True`, sha256) en vez de introducir Merkle por
 sofisticación. Si un contrato futuro lo exige explícitamente, se
-evalúa entonces (mismo criterio de ADR-017/ADR-020/ADR-021: nada se
+evalúa entonces (mismo criterio de ADR-051/ADR-054/ADR-055: nada se
 construye por adelantado sin necesidad real).
 
 No es "EvidenceRoot" como estructura desplegada con firma real — es el
