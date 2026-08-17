@@ -212,6 +212,83 @@ def test_verify_raises_on_empty_envelope():
         verify(_input(envelope={}))
 
 
+# ---------------------------------------------------------------------------
+# K.1: mission_constraints_respected real (deja de ser constante None).
+# ---------------------------------------------------------------------------
+
+
+def test_mission_constraints_respected_is_inconclusive_when_safety_kernel_never_evaluated_mission():
+    decision = verify(_input())  # _envelope() default: mission_bounds=None
+    assert "mission_constraints_respected" in decision.not_evaluated
+
+
+def test_mission_constraints_respected_inconclusive_when_fresh_blast_radius_not_supplied():
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(_input(envelope=_envelope(mission_bounds=sealed)))
+    assert "mission_constraints_respected" in decision.not_evaluated
+
+
+def test_mission_constraints_respected_inconclusive_for_insufficient_context_on_refresh():
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(_input(envelope=_envelope(mission_bounds=sealed), fresh_mission_blast_radius="INSUFFICIENT_CONTEXT"))
+    assert "mission_constraints_respected" in decision.not_evaluated
+
+
+def test_mission_constraints_respected_rejects_critical_on_fresh_reevaluation():
+    """Prueba crítica de K.1: CRITICAL en la re-verificación fresca
+    siempre rechaza, nunca queda como nota informativa."""
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(
+        _input(envelope=_envelope(mission_bounds=sealed), fresh_mission_context_hash="sha256:" + "a" * 64, fresh_mission_blast_radius="CRITICAL", unresolved_semantic_conflicts=False)
+    )
+    assert decision.state == "REJECTED"
+    assert "mission_constraints_respected" in decision.violated
+
+
+def test_mission_constraints_respected_rejects_stale_mission_context_hash():
+    """Referencia/hash de MissionContext obsoleta o incorrecta -> REJECTED,
+    aunque el mission_blast_radius fresco en sí sea aceptable."""
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(
+        _input(envelope=_envelope(mission_bounds=sealed), fresh_mission_context_hash="sha256:" + "f" * 64, fresh_mission_blast_radius="LOW", unresolved_semantic_conflicts=False)
+    )
+    assert decision.state == "REJECTED"
+    assert "mission_constraints_respected" in decision.violated
+
+
+def test_mission_constraints_respected_rejects_unresolved_semantic_conflict():
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(
+        _input(envelope=_envelope(mission_bounds=sealed), fresh_mission_context_hash="sha256:" + "a" * 64, fresh_mission_blast_radius="LOW", unresolved_semantic_conflicts=True)
+    )
+    assert decision.state == "REJECTED"
+    assert "mission_constraints_respected" in decision.violated
+
+
+def test_mission_constraints_respected_inconclusive_when_conflict_flag_not_supplied():
+    """UNKNOWN nunca se convierte en VERIFIED: aunque el blast radius
+    fresco sea aceptable, sin confirmar ausencia de conflictos el check
+    queda en None, no en True."""
+    sealed = {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(_input(envelope=_envelope(mission_bounds=sealed), fresh_mission_context_hash="sha256:" + "a" * 64, fresh_mission_blast_radius="LOW"))
+    assert "mission_constraints_respected" in decision.not_evaluated
+
+
+def test_mission_constraints_respected_is_true_when_everything_confirmed_fresh():
+    sealed = {"mission_blast_radius": "MEDIUM", "mission_context_hash": "sha256:" + "a" * 64}
+    decision = verify(
+        _input(
+            envelope=_envelope(mission_bounds=sealed),
+            fresh_mission_context_hash="sha256:" + "a" * 64,
+            fresh_mission_blast_radius="MEDIUM",
+            unresolved_semantic_conflicts=False,
+        )
+    )
+    assert "mission_constraints_respected" not in decision.violated
+    assert "mission_constraints_respected" not in decision.not_evaluated
+    assert decision.state == "VERIFIED"  # con el resto de _input() ya confirmado
+
+
 def test_verify_uses_real_safety_kernel_envelope_end_to_end(contracts_path, context):
     """Integración real: construye un SafetyEnvelope de verdad con
     safety_kernel y lo pasa a independent_verifier — no un envelope

@@ -25,15 +25,23 @@ siguieran siendo ciertos:
   `required_runbook` deben ser exactamente los que este `tool_name`/
   `incident` producirían).
 
-## VERIFIED nunca alcanzable hoy — igual que SAFE_TO_EVALUATE
+## `mission_constraints_respected` real (K.1)
 
-`mission_constraints_respected` es una constante `None`: Mission
-Context no existe (`architecture/v0.6.25-gap-matrix.md` §12). Por eso
-`verify()` nunca devuelve `VERIFIED` con el estado real del sistema,
-incluso suministrando todos los demás hechos — mismo patrón y misma
-honestidad que `safety_kernel` (ver su README). `decide_state()` se
-prueba de forma aislada para demostrar que `VERIFIED` sí es alcanzable
-por la lógica.
+Desde el microcierre K.1, `mission_constraints_respected` ya NO es una
+constante `None` — re-verifica en fresco lo que `safety_kernel` selló en
+`envelope["mission_bounds"]` (ADR-062): que un `mission_context_hash`
+recién consultado coincida con el sellado (detecta referencia obsoleta
+o incorrecta), que una re-evaluación de `mission_blast_radius` siga sin
+ser `CRITICAL`, y que no haya conflictos semánticos sin resolver
+afectando al target. **No recalcula `MissionContext` desde cero** —
+verifica la REFERENCIA, no reconstruye el cálculo (eso sigue siendo
+responsabilidad exclusiva de `mission_context`).
+
+`VERIFIED` es ahora alcanzable por un checkout real (probado en
+`tests/integration/test_k1_mission_verifier_vertical_slice.py`) cuando
+TODOS los hechos frescos —incluidos los de misión— se confirman. Sigue
+sin ser una aprobación: la única vía de autorización real sigue siendo
+`policy_adapter`/`Approval` (ADR-011).
 
 ## INCONCLUSIVE y REJECTED → ZERO EXECUTE
 

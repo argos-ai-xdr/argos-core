@@ -85,6 +85,7 @@ class SafetyCheckInput:
     observed_blast_radius_count: int | None = None
     no_unresolved_critical_drift: bool | None = None
     mission_blast_radius: str | None = None  # "NONE"|"LOW"|"MEDIUM"|"HIGH"|"CRITICAL"|"INSUFFICIENT_CONTEXT", ver mission_context.MissionImpactLevel (ADR-062, Fase K)
+    mission_context_hash: str | None = None  # mission_context.evidence._mission_context_hash del MissionContext consultado -- sellado en el envelope para que independent_verifier pueda detectar una referencia obsoleta (K.1)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -226,6 +227,17 @@ def _build_envelope_payload(inp: SafetyCheckInput, checks: tuple[SafetyCheck, ..
     if inp.observed_blast_radius_count is not None:
         verification_predicates.append(f"blast_radius_count<= {MAX_BLAST_RADIUS} (observado: {inp.observed_blast_radius_count})")
 
+    # K.1: mission_bounds ya no es una constante -- si el llamante evaluó
+    # MissionContext (mission_blast_radius no None/INSUFFICIENT_CONTEXT),
+    # el envelope lo sella para que independent_verifier pueda re-verificarlo
+    # en fresco contra la MISMA referencia, no contra un cálculo nuevo.
+    mission_bounds = None
+    if inp.mission_blast_radius is not None and inp.mission_blast_radius != "INSUFFICIENT_CONTEXT":
+        mission_bounds = {
+            "mission_blast_radius": inp.mission_blast_radius,
+            "mission_context_hash": inp.mission_context_hash,
+        }
+
     payload = {
         "envelope_id": envelope_id,
         "incident_ref": inp.incident.get("incident_id", ""),
@@ -241,7 +253,7 @@ def _build_envelope_payload(inp: SafetyCheckInput, checks: tuple[SafetyCheck, ..
         "verification_predicates": verification_predicates,
         "rollback_ref": f"rollback/{inp.tool_name}",
         "runtime_trust_ref": None,
-        "mission_bounds": None,
+        "mission_bounds": mission_bounds,
         "policy_ref": POLICY_REF,
         "residual_risk": residual_risk,
         "valid_until": (now + datetime.timedelta(minutes=ENVELOPE_TTL_MINUTES)).isoformat(),

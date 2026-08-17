@@ -15,6 +15,16 @@ vía dry-run real, no solo el flag `rollback_supported` del catálogo).
 EXECUTE.** Se mantienen como estados distintos solo para auditoría —
 REJECTED es una violación conocida, INCONCLUSIVE es un hecho que no se
 pudo confirmar de nuevo.
+
+**K.1** (microcierre tras Fase K): `mission_constraints_respected` deja
+de ser una constante `None` — re-verifica en fresco las restricciones de
+misión que `safety_kernel` ya selló en `envelope["mission_bounds"]`
+(ADR-062). No recalcula `MissionContext` desde cero (eso seguiría siendo
+responsabilidad de `mission_context`) — comprueba que la REFERENCIA
+sellada (`mission_context_hash`) coincide con una fresca, y que una
+re-evaluación de `mission_blast_radius`/conflictos sigue siendo
+aceptable. Mismo criterio de "hechos frescos, nunca reutilizados" que el
+resto de este módulo.
 """
 from __future__ import annotations
 
@@ -49,6 +59,9 @@ class VerificationCheckInput:
     runbook_exists: bool | None = None
     rollback_dry_run_ok: bool | None = None
     observed_blast_radius_count: int | None = None
+    fresh_mission_context_hash: str | None = None  # re-consultado ahora, no el que vio safety_kernel (K.1)
+    fresh_mission_blast_radius: str | None = None  # re-evaluación fresca de mission_context.assess_blast_radius (K.1)
+    unresolved_semantic_conflicts: bool | None = None  # ¿hay algún SemanticConflict en REQUIRES_AUTHORITY que afecte a este target? (K.1)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -76,6 +89,39 @@ class VerificationDecision:
     @property
     def violated(self) -> tuple[str, ...]:
         return tuple(c.name for c in self.checks if c.passed is False)
+
+
+def _check_mission_constraints(envelope: dict, inp: VerificationCheckInput) -> tuple[bool | None, str]:
+    """K.1: re-verifica en fresco las restricciones de misión que
+    safety_kernel selló en envelope['mission_bounds'] -- nunca las
+    recalcula desde cero (eso es responsabilidad de mission_context), y
+    nunca confía en que sigan siendo ciertas sin volver a comprobarlas.
+    UNKNOWN nunca se convierte en VERIFIED: cualquier hecho fresco no
+    suministrado dej a el check en None (INCONCLUSIVE), nunca en True."""
+    mission_bounds = envelope.get("mission_bounds")
+    if mission_bounds is None:
+        return None, "Safety Kernel no evaluó MissionContext para esta acción (mission_bounds ausente en el envelope)"
+
+    sealed_hash = mission_bounds.get("mission_context_hash")
+    if inp.fresh_mission_context_hash is not None and sealed_hash is not None and inp.fresh_mission_context_hash != sealed_hash:
+        return False, f"MissionContext hash no coincide: sellado={sealed_hash!r}, fresco={inp.fresh_mission_context_hash!r} (referencia obsoleta o incorrecta)"
+
+    if inp.fresh_mission_blast_radius is None:
+        return None, "fresh_mission_blast_radius no re-suministrado en la verificación"
+    if inp.fresh_mission_blast_radius == "INSUFFICIENT_CONTEXT":
+        return None, "MissionContext sigue sin evaluación suficiente en la re-verificación fresca"
+    if inp.fresh_mission_blast_radius == "CRITICAL":
+        return False, "mission_blast_radius=CRITICAL en la re-verificación fresca"
+
+    if inp.unresolved_semantic_conflicts is None:
+        return None, "unresolved_semantic_conflicts no re-suministrado en la verificación"
+    if inp.unresolved_semantic_conflicts:
+        return False, "conflicto semántico sin resolver (REQUIRES_AUTHORITY) afecta a este target"
+
+    return (
+        True,
+        f"mission_context_hash coincide con el sellado, mission_blast_radius={inp.fresh_mission_blast_radius!r} (no CRITICAL), sin conflictos sin resolver",
+    )
 
 
 def _run_checks(inp: VerificationCheckInput) -> tuple[VerificationCheck, ...]:
@@ -123,9 +169,7 @@ def _run_checks(inp: VerificationCheckInput) -> tuple[VerificationCheck, ...]:
         blast_radius_bounded = max_blast_radius is not None and inp.observed_blast_radius_count <= max_blast_radius
         blast_radius_detail = f"{inp.observed_blast_radius_count} recurso(s), máximo declarado en el envelope: {max_blast_radius}"
 
-    # mission_bounds del envelope siempre es None hoy (Mission Context no
-    # existe, ver architecture/v0.6.25-gap-matrix.md §12).
-    mission_constraints_respected = None
+    mission_constraints_respected, mission_detail = _check_mission_constraints(envelope, inp)
 
     return (
         VerificationCheck("references_resolve", references_resolve, "incident_ref/rollback_ref/required_runbook consistentes con el envelope" if references_resolve else "el envelope no referencia a este incident/tool"),
@@ -136,7 +180,7 @@ def _run_checks(inp: VerificationCheckInput) -> tuple[VerificationCheck, ...]:
         VerificationCheck("postconditions_measurable", postconditions_measurable, f"{len(envelope.get('verification_predicates', []))} verification_predicate(s)"),
         VerificationCheck("rollback_executable", rollback_executable, rollback_detail),
         VerificationCheck("blast_radius_bounded", blast_radius_bounded, blast_radius_detail),
-        VerificationCheck("mission_constraints_respected", mission_constraints_respected, "Mission Context no existe todavía"),
+        VerificationCheck("mission_constraints_respected", mission_constraints_respected, mission_detail),
     )
 
 

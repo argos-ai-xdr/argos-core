@@ -267,6 +267,43 @@ def test_build_envelope_payload_produces_a_schema_valid_envelope(contracts_path,
     assert errors == []
 
 
+def test_envelope_seals_mission_bounds_when_mission_context_was_evaluated(contracts_path, context):
+    """K.1: mission_bounds ya no es una constante None -- si el llamante
+    evaluó MissionContext, el envelope sella {mission_blast_radius,
+    mission_context_hash} para que independent_verifier pueda
+    re-verificarlo contra la MISMA referencia."""
+    from argos_testing import build_registry
+    from safety_kernel import _build_envelope_payload, _run_checks
+
+    inp = _input(mission_blast_radius="LOW", mission_context_hash="sha256:" + "a" * 64)
+    registry = build_registry(contracts_path)
+    checks = _run_checks(inp, contracts_path=contracts_path, registry=registry)
+    payload = _build_envelope_payload(inp, checks)
+    assert payload["mission_bounds"] == {"mission_blast_radius": "LOW", "mission_context_hash": "sha256:" + "a" * 64}
+
+
+def test_envelope_mission_bounds_is_none_when_mission_context_not_evaluated(contracts_path, context):
+    from argos_testing import build_registry
+    from safety_kernel import _build_envelope_payload, _run_checks
+
+    inp = _input()  # mission_blast_radius=None por defecto
+    registry = build_registry(contracts_path)
+    checks = _run_checks(inp, contracts_path=contracts_path, registry=registry)
+    payload = _build_envelope_payload(inp, checks)
+    assert payload["mission_bounds"] is None
+
+
+def test_envelope_mission_bounds_is_none_for_insufficient_context(contracts_path, context):
+    from argos_testing import build_registry
+    from safety_kernel import _build_envelope_payload, _run_checks
+
+    inp = _input(mission_blast_radius="INSUFFICIENT_CONTEXT")
+    registry = build_registry(contracts_path)
+    checks = _run_checks(inp, contracts_path=contracts_path, registry=registry)
+    payload = _build_envelope_payload(inp, checks)
+    assert payload["mission_bounds"] is None
+
+
 def test_envelope_respects_max_targets_and_max_blast_radius_constants(contracts_path, context):
     from argos_testing import build_registry
     from safety_kernel import MAX_BLAST_RADIUS, MAX_TARGETS, _build_envelope_payload, _run_checks
