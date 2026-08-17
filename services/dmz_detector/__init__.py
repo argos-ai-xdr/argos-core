@@ -12,12 +12,27 @@ siendo señal real: un intento de exfiltración contenido no es "sin
 anomalía", es una anomalía que además fue contenida. Omitirlo violaría
 "anomalía crítica golden omitida = 0" (C-08.UC5) — mismo tipo de fallo ya
 encontrado y corregido en evaluators.detection (argos-validation).
+
+Propuesta v0.6.25.4 (13.13, Slice P0 y límites de ARG-018) añade
+"source_mode correcto" a la aceptación: REAL_CONNECTOR cuando se prueba la
+DMZ autorizada, EMULATED cuando se usa replay contractual — nunca se debe
+afirmar REAL_CONNECTOR sobre datos de replay. RawEvent (normalizer) es
+infraestructura compartida por todos los conectores y no lleva
+source_mode; DetectedAnomaly lo transporta junto al RawEvent para que el
+llamador lo añada al payload ya validado de SecurityEvent
+(additionalProperties: true en el schema — no rompe el contrato).
 """
 from __future__ import annotations
 
 import dataclasses
 
 from normalizer import RawEvent
+
+_VALID_SOURCE_MODES = frozenset({"REAL_CONNECTOR", "EMULATED"})
+
+
+class InvalidSourceMode(Exception):
+    pass
 
 
 @dataclasses.dataclass(frozen=True)
@@ -30,6 +45,7 @@ class FlowRecord:
     protocol: str
     bytes_transferred: int
     verdict: str  # "ALLOWED" | "DENIED" — Hubble ya bloqueó DENIED vía NetworkPolicy, pero sigue siendo señal
+    source_mode: str  # "REAL_CONNECTOR" | "EMULATED" (propuesta v0.6.25.4, 13.13)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -37,6 +53,12 @@ class Baseline:
     authorized_destinations: frozenset[str]
     max_bytes_per_destination: dict[str, int] = dataclasses.field(default_factory=dict)
     default_max_bytes: int = 1_000_000
+
+
+@dataclasses.dataclass(frozen=True)
+class DetectedAnomaly:
+    event: RawEvent
+    source_mode: str
 
 
 def _anomaly_reasons(flow: FlowRecord, baseline: Baseline) -> list[str]:
@@ -49,21 +71,29 @@ def _anomaly_reasons(flow: FlowRecord, baseline: Baseline) -> list[str]:
     return reasons
 
 
-def detect_anomalies(flows: list[FlowRecord], baseline: Baseline) -> list[RawEvent]:
-    events = []
+def detect_anomalies(flows: list[FlowRecord], baseline: Baseline) -> list[DetectedAnomaly]:
+    anomalies = []
     for flow in flows:
+        if flow.source_mode not in _VALID_SOURCE_MODES:
+            raise InvalidSourceMode(
+                f"source_mode={flow.source_mode!r} inválido para flow {flow.native_ref!r}, "
+                f"debe ser uno de {sorted(_VALID_SOURCE_MODES)}"
+            )
         if not _anomaly_reasons(flow, baseline):
             continue
         # externo + no autorizado es lo más grave (exfiltración fuera del
         # perímetro); un destino interno inesperado o un pico de volumen
         # dentro del clúster es serio pero de menor severidad relativa.
         severity = "critical" if flow.destination_is_external else "high"
-        events.append(
-            RawEvent(
-                source="dmz-detector",
-                native_ref=flow.native_ref,
-                severity_native=severity,
-                asset_id=flow.source,
+        anomalies.append(
+            DetectedAnomaly(
+                event=RawEvent(
+                    source="dmz-detector",
+                    native_ref=flow.native_ref,
+                    severity_native=severity,
+                    asset_id=flow.source,
+                ),
+                source_mode=flow.source_mode,
             )
         )
-    return events
+    return anomalies
