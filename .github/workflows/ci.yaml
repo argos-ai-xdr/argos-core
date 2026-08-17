@@ -7,7 +7,7 @@ on:
 
 jobs:
   python-ci:
-    uses: argos-ai-xdr/argos-control/.github/workflows/reusable-python-ci.yaml@main
+    uses: argos-ai-xdr/argos-control/.github/workflows/reusable-python-ci.yaml@ba1b70900218ae56d4ca93ed1404ca1d341e137c
     with:
       working-directory: "."
       contracts-ref: "main"
