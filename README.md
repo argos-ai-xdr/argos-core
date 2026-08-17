@@ -46,4 +46,4 @@ Igual que en `argos-validation`: Python no permite guiones en nombres de paquete
 * Ninguna inferencia se presenta como hecho (`correlator`).
 * Trazas y métricas contienen `run_id` (ADR-009); sin chain-of-thought (ADR-016).
 
-Ver `docs/development.md`.
+Ver `docs/development.md`. Paquete Operación XDR (ARG-028): `docs/operations-package.md`.
