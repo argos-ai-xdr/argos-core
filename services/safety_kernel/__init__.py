@@ -15,10 +15,13 @@ Las 14 comprobaciones del prompt se implementan con la misma disciplina
 que el resto de esta sesión: nunca se fabrica un resultado. Cada
 comprobación recibe su hecho del LLAMANTE (`SafetyCheckInput`) — si el
 llamante no puede aportarlo porque el subsistema que lo produciría no
-existe todavía (RuntimeTrustContext, Mission Context, firma de runbooks),
-el campo es `None` y la comprobación queda NOT_EVALUATED, nunca en
-PASS por defecto. Ver `README.md` de este módulo para qué hecho viene de
-dónde en un sistema real.
+existe todavía (RuntimeTrustContext, firma de runbooks), el campo es
+`None` y la comprobación queda NOT_EVALUATED, nunca en PASS por defecto.
+Desde ADR-062 (Fase K), `mission_impact_bounded` YA es un hecho real
+suministrable (`mission_context.assess_blast_radius`) — MissionContext
+nunca decide autorización, solo aporta un hecho más de entrada. Ver
+`README.md` de este módulo para qué hecho viene de dónde en un sistema
+real.
 """
 from __future__ import annotations
 
@@ -81,6 +84,7 @@ class SafetyCheckInput:
     tool_digest_valid: bool | None = None
     observed_blast_radius_count: int | None = None
     no_unresolved_critical_drift: bool | None = None
+    mission_blast_radius: str | None = None  # "NONE"|"LOW"|"MEDIUM"|"HIGH"|"CRITICAL"|"INSUFFICIENT_CONTEXT", ver mission_context.MissionImpactLevel (ADR-062, Fase K)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -148,8 +152,16 @@ def _run_checks(inp: SafetyCheckInput, *, contracts_path, registry) -> tuple[Saf
         blast_radius_bounded = inp.observed_blast_radius_count <= MAX_BLAST_RADIUS
         blast_radius_detail = f"{inp.observed_blast_radius_count} recurso(s) afectados, máximo {MAX_BLAST_RADIUS}"
 
-    # Mission Context no existe (architecture/v0.6.25-gap-matrix.md §12).
-    mission_impact_bounded = None
+    # ADR-062 (Fase K): Mission Context ya existe (mission_context.assess_blast_radius)
+    # -- mission_impact_bounded es un hecho real suministrable, no una
+    # constante. "Bounded" = todo lo que no sea CRITICAL; INSUFFICIENT_CONTEXT
+    # (sin MissionContext evaluado) sigue siendo None, nunca "acotado por defecto".
+    if inp.mission_blast_radius is None or inp.mission_blast_radius == "INSUFFICIENT_CONTEXT":
+        mission_impact_bounded = None
+        mission_impact_detail = "mission_blast_radius no suministrado o INSUFFICIENT_CONTEXT (MissionContext no evaluado para este target)"
+    else:
+        mission_impact_bounded = inp.mission_blast_radius != "CRITICAL"
+        mission_impact_detail = f"mission_blast_radius={inp.mission_blast_radius!r} ({'acotado' if mission_impact_bounded else 'CRITICAL, no acotado'})"
 
     # RuntimeTrustContext no existe (architecture/v0.6.25-gap-matrix.md §21-38).
     runtime_trust_valid = None
@@ -174,7 +186,7 @@ def _run_checks(inp: SafetyCheckInput, *, contracts_path, registry) -> tuple[Saf
         SafetyCheck("action_reversible", action_reversible, f"rollback_supported={inp.rollback_supported}"),
         SafetyCheck("rollback_available", rollback_available, f"rollback_supported={inp.rollback_supported}"),
         SafetyCheck("blast_radius_bounded", blast_radius_bounded, blast_radius_detail),
-        SafetyCheck("mission_impact_bounded", mission_impact_bounded, "Mission Context no existe todavía"),
+        SafetyCheck("mission_impact_bounded", mission_impact_bounded, mission_impact_detail),
         SafetyCheck("runtime_trust_valid", runtime_trust_valid, "RuntimeTrustContext no existe todavía"),
         SafetyCheck("no_unresolved_critical_drift", no_unresolved_critical_drift, drift_detail),
         SafetyCheck(

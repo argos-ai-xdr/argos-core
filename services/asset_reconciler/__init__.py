@@ -7,13 +7,22 @@ Cada conector produce solo lo que sabe (NetBox: namespace/node; Kubernetes
 Audit: workload_id/image_ref) — reconcile() los fusiona y, si dos fuentes
 DISCREPAN sobre el mismo campo, lo reporta como conflicto en vez de que una
 fuente sobrescriba a la otra en silencio.
+
+ADR-061 (Fase K) añade `authority_ranking` opcional: sin él, `reconcile()`
+mantiene EXACTAMENTE el comportamiento previo ("última fuente en la lista
+gana", con el conflicto igualmente reportado) — con él, cada conflicto se
+resuelve vía `semantic_conflict.resolve_conflict` (política de autoridad
+real, nunca por orden de llegada) y el campo se rellena con el valor
+ganador, o se omite si la política no puede decidir de forma gobernada
+(`REQUIRES_AUTHORITY`) en vez de dejar un valor arbitrario.
 """
 from __future__ import annotations
 
 import dataclasses
 
-from argos_envelope import EnvelopeContext, build_envelope, new_id_prefixed
+from argos_envelope import EnvelopeContext, build_envelope, new_id_prefixed, utc_now_iso
 from argos_testing import build_registry, validate_payload
+from semantic_conflict import SourceClaim, resolve_conflict
 
 _MERGEABLE_FIELDS = ("workload_id", "image_ref", "node", "namespace", "criticality_esp")
 
@@ -41,15 +50,23 @@ class ReconcileResult:
     conflicts: list[dict]  # [{field, values: {source: value}}]
 
 
-def reconcile(fragments: list[AssetFragment]) -> tuple[dict, list[dict]]:
+def reconcile(fragments: list[AssetFragment], *, authority_ranking: dict[str, int] | None = None) -> tuple[dict, list[dict]]:
     """Fusiona fragmentos del mismo asset_id. Devuelve (merged_fields,
     conflicts). No valida contra schema ni añade envelope — eso lo hace
-    build_asset_snapshot_payload, que sí conoce el contrato."""
+    build_asset_snapshot_payload, que sí conoce el contrato.
+
+    Sin `authority_ranking`: comportamiento original sin cambios (última
+    fuente en la lista gana, conflicto igualmente reportado). Con él:
+    cada conflicto se resuelve vía política de autoridad real
+    (`semantic_conflict.resolve_conflict`) -- el campo toma el valor
+    ganador, o se omite del merge si la política no puede decidir de
+    forma gobernada (nunca se deja un valor arbitrario)."""
     if not fragments:
         raise ValueError("reconcile necesita al menos un fragmento")
     asset_ids = {f.asset_id for f in fragments}
     if len(asset_ids) > 1:
         raise ValueError(f"reconcile recibió fragmentos de activos distintos: {asset_ids}")
+    asset_id = fragments[0].asset_id
 
     merged: dict = {}
     seen_by_field: dict[str, dict[str, object]] = {}
@@ -61,11 +78,27 @@ def reconcile(fragments: list[AssetFragment]) -> tuple[dict, list[dict]]:
             seen_by_field.setdefault(field, {})[fragment.source] = value
             merged[field] = value  # última fuente gana en el valor final; el conflicto queda registrado igualmente
 
-    conflicts = [
-        {"field": field, "values": values}
-        for field, values in seen_by_field.items()
-        if len(set(values.values())) > 1
-    ]
+    conflicts = []
+    for field, values in seen_by_field.items():
+        if len(set(values.values())) <= 1:
+            continue
+        conflict_entry: dict = {"field": field, "values": values}
+        if authority_ranking is not None:
+            now = utc_now_iso()
+            claims = [SourceClaim(source_id=source, value=value, observed_at=now) for source, value in values.items()]
+            resolution = resolve_conflict(asset_id, field, claims, classification="CLASSIFICATION", authority_ranking=authority_ranking)
+            conflict_entry["resolution"] = {
+                "state": resolution.state,
+                "winning_source": resolution.winning_source,
+                "rejected_sources": resolution.rejected_sources,
+                "rule": resolution.rule,
+                "reason_code": resolution.reason_code,
+            }
+            if resolution.winning_source is not None:
+                merged[field] = values[resolution.winning_source]
+            else:
+                merged.pop(field, None)  # sin resolución gobernada: no se afirma un valor arbitrario
+        conflicts.append(conflict_entry)
     return merged, conflicts
 
 
@@ -74,8 +107,10 @@ def build_asset_snapshot_payload(
     context: EnvelopeContext,
     asset_id: str,
     fragments: list[AssetFragment],
+    *,
+    authority_ranking: dict[str, int] | None = None,
 ) -> ReconcileResult:
-    merged_fields, conflicts = reconcile(fragments)
+    merged_fields, conflicts = reconcile(fragments, authority_ranking=authority_ranking)
     snapshot_id = new_id_prefixed("asn")
 
     payload = {"asset_id": asset_id, **merged_fields}

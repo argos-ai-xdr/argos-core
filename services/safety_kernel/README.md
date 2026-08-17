@@ -11,13 +11,16 @@ habilita que la cadena siga evaluando.
 De las 14 comprobaciones que pide el prompt, 5 son reales y siempre
 evaluables hoy (`incident_valid`, `evidence_sufficient`,
 `target_in_scope`, `action_reversible`/`rollback_available`,
-`no_prohibited_action`), 6 son reales pero opcionales según lo que el
+`no_prohibited_action`), 7 son reales pero opcionales según lo que el
 llamante pueda aportar (`target_exists`, `tool_active`,
 `tool_digest_valid`, `blast_radius_bounded`,
-`no_unresolved_critical_drift`), y **3 son estructuralmente `None`**
-hoy porque el subsistema que las produciría no existe:
-`runbook_signed` (sin Sovereign Root of Trust), `mission_impact_bounded`
-(sin Mission Context), `runtime_trust_valid` (sin RuntimeTrustContext).
+`no_unresolved_critical_drift`, y desde ADR-062/Fase K también
+`mission_impact_bounded` — vía `mission_context.assess_blast_radius`,
+`None`/`INSUFFICIENT_CONTEXT` si no se evaluó, nunca "acotado" por
+defecto), y **2 siguen siendo estructuralmente `None`** porque el
+subsistema que las produciría no existe: `runbook_signed` (sin
+Sovereign Root of Trust), `runtime_trust_valid` (sin
+RuntimeTrustContext).
 
 **Consecuencia real, no un defecto**: `evaluate()` nunca alcanza
 `SAFE_TO_EVALUATE` con el estado actual del sistema — siempre queda en

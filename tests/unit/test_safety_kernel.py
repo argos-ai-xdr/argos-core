@@ -110,20 +110,47 @@ def test_decide_state_violation_always_outweighs_unevaluated():
 # ---------------------------------------------------------------------------
 
 
-def test_evaluate_with_every_real_fact_supplied_is_inconclusive_not_safe(contracts_path, context):
-    """El resultado más importante de este módulo: incluso suministrando
-    TODOS los hechos que hoy pueden ser reales (integridad de catálogo,
-    blast radius observado, drift, inventario), el resultado sigue siendo
-    INCONCLUSIVE — runbook_signed/mission_impact_bounded/runtime_trust_valid
-    son estructuralmente None porque Sovereign Root of Trust/Mission
-    Context/RuntimeTrustContext no existen (architecture/v0.6.25-gap-matrix.md).
-    SAFE_TO_EVALUATE no es alcanzable por ningún checkout real de hoy — eso
-    es correcto, no un defecto: el Safety Kernel nunca debe fingir que el
-    resto de la cadena de aseguramiento existe."""
+def test_evaluate_without_mission_blast_radius_leaves_three_checks_not_evaluated(contracts_path, context):
+    """Sin `mission_blast_radius` suministrado (el caso por defecto de
+    `_input()`), el resultado sigue siendo INCONCLUSIVE —
+    runbook_signed/mission_impact_bounded/runtime_trust_valid quedan sin
+    evaluar. mission_impact_bounded YA es un hecho suministrable desde
+    ADR-061 (Fase K, MissionContext real) — aquí simplemente no se
+    suministra, igual que blast_radius_bounded/tool_digest_valid pueden
+    quedar sin suministrar. runbook_signed/runtime_trust_valid siguen
+    siendo constantes estructurales (Sovereign Root of Trust/
+    RuntimeTrustContext no existen)."""
     decision = evaluate(_input(), contracts_path=contracts_path, context=context)
     assert decision.state == "INCONCLUSIVE"
     assert set(decision.not_evaluated) == {"runbook_signed", "mission_impact_bounded", "runtime_trust_valid"}
     assert decision.envelope is None
+
+
+def test_evaluate_with_mission_blast_radius_supplied_reduces_not_evaluated_to_two(contracts_path, context):
+    """ADR-061 (Fase K): con MissionContext real evaluado (mission_blast_radius
+    suministrado y no INSUFFICIENT_CONTEXT), mission_impact_bounded deja
+    de estar en not_evaluated -- SAFE_TO_EVALUATE sigue sin ser
+    alcanzable (runbook_signed/runtime_trust_valid siguen sin existir),
+    pero el conjunto de checks sin evaluar se reduce de 3 a 2, medible."""
+    decision = evaluate(_input(mission_blast_radius="LOW"), contracts_path=contracts_path, context=context)
+    assert decision.state == "INCONCLUSIVE"
+    assert set(decision.not_evaluated) == {"runbook_signed", "runtime_trust_valid"}
+
+
+def test_evaluate_blocks_critical_mission_blast_radius(contracts_path, context):
+    """Prueba crítica de K7: mission impact CRITICAL siempre bloquea,
+    nunca queda como una nota informativa."""
+    decision = evaluate(_input(mission_blast_radius="CRITICAL"), contracts_path=contracts_path, context=context)
+    assert decision.state == "BLOCKED"
+    assert "mission_impact_bounded" in decision.violated
+
+
+def test_evaluate_with_insufficient_mission_context_is_not_evaluated_not_bounded(contracts_path, context):
+    """INSUFFICIENT_CONTEXT (MissionContext existe como concepto pero no
+    se evaluó para este target) se trata exactamente igual que 'no
+    suministrado' -- nunca como 'acotado por defecto'."""
+    decision = evaluate(_input(mission_blast_radius="INSUFFICIENT_CONTEXT"), contracts_path=contracts_path, context=context)
+    assert "mission_impact_bounded" in decision.not_evaluated
 
 
 def test_evaluate_blocks_irreversible_side_effect_class_unconditionally(contracts_path, context):
