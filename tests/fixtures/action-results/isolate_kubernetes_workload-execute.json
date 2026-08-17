@@ -1,0 +1,22 @@
+{
+  "id": "act-a1e66fa8eafb40f3979d3670a8da9275",
+  "schema_version": "1.0.0",
+  "observed_at": "2026-08-17T15:56:43.472811+00:00",
+  "producer": "kubernetes-executor",
+  "classification": "internal",
+  "run_id": "run-evidence-j-001",
+  "payload_hash": "sha256:1087152aa806ae245309eb94f486b6562022baa4da952a17b68356bc1a37dfd2",
+  "action_id": "pol-j-1",
+  "idempotency_key": "k-j-1",
+  "dry_run": false,
+  "started_at": "2026-08-17T15:56:43.472811+00:00",
+  "ended_at": "2026-08-17T15:56:43.472811+00:00",
+  "status": "succeeded",
+  "changed_resources": [
+    "ciliumnetworkpolicy/gseg-simulado-isolate"
+  ],
+  "verification": {
+    "passed": true,
+    "detail": "aislamiento confirmado para deployment/gseg-simulado"
+  }
+}

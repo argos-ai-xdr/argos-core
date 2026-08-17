@@ -1,0 +1,22 @@
+{
+  "id": "act-fde9a1c84aef4db49e78574061d59805",
+  "schema_version": "1.0.0",
+  "observed_at": "2026-08-17T15:56:43.481498+00:00",
+  "producer": "scale-to-zero-executor-rollback",
+  "classification": "internal",
+  "run_id": "run-evidence-j-001",
+  "payload_hash": "sha256:a085e9f74a5a45b2f93a49fec718cac0579156473a51ce07783d2ac34c4b95f7",
+  "action_id": "pol-j-2",
+  "idempotency_key": "k-j-2-rb",
+  "dry_run": false,
+  "started_at": "2026-08-17T15:56:43.481498+00:00",
+  "ended_at": "2026-08-17T15:56:43.481498+00:00",
+  "status": "succeeded",
+  "changed_resources": [
+    "deployment/payments-worker"
+  ],
+  "verification": {
+    "passed": true,
+    "detail": "réplicas restauradas a 3 para deployment/payments-worker"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "act-e0708cb641724905a2109232c6d57a51",
+  "schema_version": "1.0.0",
+  "observed_at": "2026-08-17T15:56:43.489954+00:00",
+  "producer": "increase-monitoring-executor-rollback",
+  "classification": "internal",
+  "run_id": "run-evidence-j-001",
+  "payload_hash": "sha256:f9dd94f24ca29f7a92ab6d332f7a7bc367d35fad1450245f1c20aeb1de24bda1",
+  "action_id": "pol-j-3",
+  "idempotency_key": "k-j-3-rb",
+  "dry_run": false,
+  "started_at": "2026-08-17T15:56:43.489954+00:00",
+  "ended_at": "2026-08-17T15:56:43.489954+00:00",
+  "status": "succeeded",
+  "changed_resources": [
+    "deployment/gseg-simulado"
+  ],
+  "verification": {
+    "passed": true,
+    "detail": "verbosidad restaurada a 'normal' para deployment/gseg-simulado"
+  }
+}

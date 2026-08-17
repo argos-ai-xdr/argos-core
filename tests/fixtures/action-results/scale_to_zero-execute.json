@@ -1,0 +1,22 @@
+{
+  "id": "act-e1e3f8e0d5a7412d9747dd0e4d0a4062",
+  "schema_version": "1.0.0",
+  "observed_at": "2026-08-17T15:56:43.481498+00:00",
+  "producer": "scale-to-zero-executor",
+  "classification": "internal",
+  "run_id": "run-evidence-j-001",
+  "payload_hash": "sha256:c56e7ecc4f6c4acb2905225e92076eda2e212b59cae8c77c38366eba0210d0e0",
+  "action_id": "pol-j-2",
+  "idempotency_key": "k-j-2",
+  "dry_run": false,
+  "started_at": "2026-08-17T15:56:43.481498+00:00",
+  "ended_at": "2026-08-17T15:56:43.481498+00:00",
+  "status": "succeeded",
+  "changed_resources": [
+    "deployment/payments-worker"
+  ],
+  "verification": {
+    "passed": true,
+    "detail": "réplicas en 0 para deployment/payments-worker"
+  }
+}

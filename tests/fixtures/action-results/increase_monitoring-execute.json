@@ -1,0 +1,22 @@
+{
+  "id": "act-b96518ef680f4f3aad5cba054fe3097a",
+  "schema_version": "1.0.0",
+  "observed_at": "2026-08-17T15:56:43.489954+00:00",
+  "producer": "increase-monitoring-executor",
+  "classification": "internal",
+  "run_id": "run-evidence-j-001",
+  "payload_hash": "sha256:72993d2269adf304902a527fbe6f714c7228947d79120a53663780bdcbe95bab",
+  "action_id": "pol-j-3",
+  "idempotency_key": "k-j-3",
+  "dry_run": false,
+  "started_at": "2026-08-17T15:56:43.489954+00:00",
+  "ended_at": "2026-08-17T15:56:43.489954+00:00",
+  "status": "succeeded",
+  "changed_resources": [
+    "deployment/gseg-simulado"
+  ],
+  "verification": {
+    "passed": true,
+    "detail": "verbosidad elevada a 'verbose' para deployment/gseg-simulado"
+  }
+}
