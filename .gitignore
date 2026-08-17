@@ -24,7 +24,7 @@ htmlcov/
 .env
 .env.*
 *.local.yaml
-secrets/
+/secrets/
 
 # Evidencia/reportes generados por un run — no versionar (ADR-016).
 # Anclado a la raíz (/evidence/): sin la barra inicial coincidiría con
