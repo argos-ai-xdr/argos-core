@@ -11,4 +11,3 @@ jobs:
     with:
       working-directory: "."
       contracts-ref: "main"
-    secrets: inherit
