@@ -26,7 +26,13 @@ htmlcov/
 *.local.yaml
 secrets/
 
-# Evidencia/reportes generados por un run — no versionar (ADR-016)
+# Evidencia/reportes generados por un run — no versionar (ADR-016).
+# Anclado a la raíz (/evidence/): sin la barra inicial coincidiría con
+# cualquier directorio "evidence" del árbol — mismo bug real ya
+# encontrado en argos-validation (harness/evidence/manifest.py nunca se
+# había versionado desde el primer commit) y argos-control
+# (templates/evidence/). services/evidence_writer/ no coincide (nombre
+# distinto), pero se ancla igual por si acaso.
 run_summary.json
-evidence/
+/evidence/
 reports/generated/
