@@ -19,6 +19,8 @@ import json
 
 from argos_envelope import new_id_prefixed, utc_now_iso
 
+from federation.security_domain import CLASSIFICATION_LEVELS, UnknownClassification
+
 ARTIFACT_TYPES = frozenset(
     {
         "IOC", "TTP", "DetectionRule", "AttackPattern", "ValidatedRunbook",
@@ -99,6 +101,8 @@ def build_federated_artifact(
 ) -> FederatedArtifact:
     if artifact_type not in ARTIFACT_TYPES:
         raise UnknownArtifactType(f"{artifact_type!r} no es un tipo de artefacto federado soportado: {sorted(ARTIFACT_TYPES)}")
+    if origin_classification not in CLASSIFICATION_LEVELS:
+        raise UnknownClassification(f"{origin_classification!r} no es una clasificación real: {CLASSIFICATION_LEVELS}")
     if origin_trust == "AUTHORITATIVE":
         raise ForbiddenDefaultTrust("origin_trust=AUTHORITATIVE no puede asignarse al ingerir un artefacto federado (§12) -- solo una decisión local posterior puede promoverlo")
     if origin_trust not in INGESTABLE_TRUST_LABELS:
