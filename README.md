@@ -38,6 +38,7 @@ Stack: Python, FastAPI, Pydantic, NATS, OpenTelemetry (ver `argos-control` — "
 | `semantic-conflict` | ADR-061 (Fase K): resolución de conflictos por autoridad gobernada, determinista; extiende `asset-reconciler` | Lógica real |
 | `soc-adapter` | Filtra por TLP, construye `SOCHandover` | Lógica real |
 | `dmz-detector` | ARG-018 (C-08.UC5): anomalías DMZ/egress por reglas + baseline; emite `RawEvent` hacia `normalizer` | Lógica real |
+| `federation` | ADR-064..067 (Fase L): `SecurityDomain`/`FederatedArtifact`/`FederationDecision`/`CrossDomainTransfer`/IFC/sanitización determinista/anti-replay/revocación; "la federación transporta información, nunca autoridad" | Lógica real, local; `REAL_MULTI_SITE_FEDERATION`/`REAL_TRANSPORT`/`REAL_FEDERATION_IDENTITY` = `BLOCKED_EXTERNAL` (no hay un segundo sitio ARGOS real) |
 
 ## Nota de nombres de paquete
 
