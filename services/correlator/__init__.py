@@ -9,6 +9,21 @@ ATT&CK real requiere las reglas de argos-contracts-scenarios/mappings/attack/
 que todavía no existen (ver ese README). Aceptar attack_techniques como
 parámetro opcional del llamador es honesto; inventar una técnica plausible
 no lo sería (AC08: grounding CTI, inventados = 0).
+
+`dedupe_by_correlation_key` (2026-08-18, ARG-015/016): un mismo ataque real
+puede producir muchas alertas de la fuente nativa para la misma actividad
+-- caso conocido de Falco, que dispara una alerta por cada subproceso Linux
+de una misma actividad (correo real del equipo XDR/Wazuh, ver
+argos-control/architecture/notes/falco-wazuh-correlation.md). No debemos
+convertir cada una en un `Incident` independiente. `correlation_key` es un
+hecho suministrado por el llamador (Wazuh puede derivarlo con
+`frequency`+`timeframe`+`if_matched_sid`/`if_matched_group` o
+`same_source_ip`/`same_user` -- mismo patrón "caller-supplied facts" que
+`safety_envelope` en argos-cyber-tools) -- este módulo NO inventa ninguna
+regla de qué cuenta como "la misma actividad", solo colapsa lo que ya
+llega marcado como tal, preservando cada evento original en
+`related_event_refs` para que la evidencia siga siendo auditable
+(AC08: nunca perder procedencia al agregar).
 """
 from __future__ import annotations
 
@@ -56,6 +71,52 @@ def group_by_asset_and_window(events: list[dict], window: datetime.timedelta) ->
         if current_group:
             groups.append(current_group)
     return groups
+
+
+def dedupe_by_correlation_key(events: list[dict]) -> list[dict]:
+    """Colapsa eventos que comparten `correlation.correlation_key` en un
+    único evento representativo por clave -- conserva el evento MÁS
+    ANTIGUO de cada grupo como base (su `observed_at` real, no uno
+    fabricado) y le añade/actualiza `correlation.occurrence_count`,
+    `correlation.first_seen`, `correlation.last_seen` y
+    `correlation.related_event_refs` (los `id` de envelope de TODOS los
+    eventos del grupo, base incluida -- nunca se pierde una referencia).
+    Eventos sin `correlation_key` (o con `correlation` ausente) pasan sin
+    tocar, uno a uno -- no se inventa una clave que el llamador no dio.
+    Determinista: mismo orden de entrada -> mismo resultado, y conserva la
+    posición de la PRIMERA aparición de cada clave (o de cada evento sin
+    clave) -- no agrupa todo lo colapsado al final."""
+    grouped: dict[str, list[dict]] = {}
+    for event in events:
+        key = (event.get("correlation") or {}).get("correlation_key")
+        if key:
+            grouped.setdefault(key, []).append(event)
+
+    result: list[dict] = []
+    emitted_keys: set[str] = set()
+    for event in events:
+        key = (event.get("correlation") or {}).get("correlation_key")
+        if not key:
+            result.append(event)
+            continue
+        if key in emitted_keys:
+            continue
+        emitted_keys.add(key)
+        members = sorted(grouped[key], key=lambda e: _parse(e["observed_at"]))
+        base = members[0]
+        collapsed_correlation = dict(base.get("correlation") or {})
+        collapsed_correlation.update(
+            {
+                "correlation_key": key,
+                "occurrence_count": len(members),
+                "first_seen": members[0]["observed_at"],
+                "last_seen": members[-1]["observed_at"],
+                "related_event_refs": [m["id"] for m in members],
+            }
+        )
+        result.append({**base, "correlation": collapsed_correlation})
+
+    return result
 
 
 def build_incident_payload(
