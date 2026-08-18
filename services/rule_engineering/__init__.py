@@ -123,9 +123,28 @@ class RuleDeploymentGate:
         if not durable_approval_available:
             return RuleDeploymentAuthorizationResult(
                 False,
-                "AI_DIRECT_RULE_DEPLOYMENT=DENY: sin almacén de aprobación durable (ARG-020 sin cerrar, "
-                "CH-07 KNOWN_FAILING, ADR-068) -- generación/validación/presentación al SOC permitidas, "
-                "despliegue automático no",
+                "AI_DIRECT_RULE_DEPLOYMENT=DENY: sin almacén de aprobación durable conectado a este flujo "
+                "(DurableApprovalStore existe y está probado, argos-cyber-tools/policies/approval/"
+                "durable_store.py, pero ningún despliegue real lo usa todavía) -- generación/validación/"
+                "presentación al SOC permitidas, despliegue automático no",
             )
 
         return RuleDeploymentAuthorizationResult(True, "autorizado")
+
+
+def compile_decoder_spec_to_xml(decoder_spec: dict) -> str:
+    """`WazuhDecoderSpec v1` -- gap real (ADR-070), deliberadamente NO
+    implementado todavía: un decoder y una regla de Wazuh son artefactos
+    distintos, y forzar este compilador ahora significaría fabricar
+    lógica de compilación sin haber validado el formato real de decoders
+    custom contra Wazuh de verdad (a diferencia de `compile_rule_spec_to_
+    xml`, que sí compila contra la sintaxis `<rule>` documentada y
+    probada). `NotImplementedError` explícito, mismo patrón honesto que
+    `LangGraphEngine`/los 10 conectores de `argos-cyber-tools` -- una
+    interfaz que declara su propia ausencia, no una que finge estar
+    completa."""
+    raise NotImplementedError(
+        "compile_decoder_spec_to_xml: WazuhDecoderSpec v1 está SPECIFIED / NOT_IMPLEMENTED "
+        "(ADR-070 §9, ARG-039) -- pendiente de validar el formato real de decoders custom de Wazuh "
+        f"antes de compilar. decoder_spec_id={decoder_spec.get('decoder_spec_id')!r}"
+    )

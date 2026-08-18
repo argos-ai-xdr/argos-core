@@ -11,8 +11,27 @@ modifica OpenSearch, nunca aprueba, nunca ejecuta (misma separación que
 ejecuta). La consulta REAL a OpenSearch/Semantic Graph/CTI vive fuera de
 este repositorio (`BLOCKED_EXTERNAL` sin esos servicios reales
 desplegados) -- este módulo decide el plan, no lo ejecuta él mismo.
+
+`should_trigger_new_investigation` (ADR-070, DE-19): protección
+estructural contra bucle recursivo. Sin ella, un `CandidateFinding`
+publicado por el propio ARGOS (p. ej. vía el sidecar Wazuh) podría
+reentrar por Kafka como una nueva `WeakSignal` y disparar otra
+investigación indefinidamente (`AI Candidate -> Kafka -> AI Candidate ->
+...`). Regla fija, sin excepción implícita: `source_mode="CANDIDATE"` Y
+`origin_system="argos-ai"` -> nunca dispara automáticamente. El
+candidato sigue existiendo y siendo consultable -- solo no se
+realimenta solo.
+
+`is_signal_tombstoned` (ADR-070, DE-23): `DetectionTombstone v1` nunca
+borra ni modifica el evento original, nunca suprime globalmente --
+acotado por la intersección de `entity_refs` + `signal_signature`
+exacta, y solo mientras `valid_from <= now <= valid_until`. Al caducar,
+vuelve a ser visible sin ninguna acción adicional (no hay "renovación
+automática" ni acumulación de estado).
 """
 from __future__ import annotations
+
+import datetime
 
 from argos_envelope import EnvelopeContext, build_envelope, new_id_prefixed
 from argos_testing import build_registry, validate_payload
@@ -105,3 +124,35 @@ def build_threat_assessment(
     if errors:
         raise InvalidThreatAssessment(errors)
     return full_payload
+
+
+def should_trigger_new_investigation(signal: dict) -> bool:
+    """DE-19: `False` únicamente cuando `source_mode="CANDIDATE"` Y
+    `origin_system="argos-ai"` -- cualquier otra combinación (incluida
+    `CANDIDATE` de otro origen, si algún día existiera) SÍ puede disparar
+    investigación; el corte es específicamente sobre ARGOS
+    realimentándose a sí mismo, no sobre `CANDIDATE` en general."""
+    return not (signal.get("source_mode") == "CANDIDATE" and signal.get("origin_system") == "argos-ai")
+
+
+def is_signal_tombstoned(
+    *, entity_refs: list[str], signal_signature: str, tombstones: list[dict], now: datetime.datetime
+) -> bool:
+    """`True` si existe un `DetectionTombstone` vigente (`valid_from <=
+    now <= valid_until`) cuya `signal_signature` coincide EXACTAMENTE y
+    cuyos `entity_refs` intersecan con los de la señal actual. Un
+    tombstone caducado, o de otra firma, o sin ninguna entidad en común,
+    nunca suprime nada -- fail-open deliberado aquí (a diferencia de
+    autorización): un tombstone es una excepción declarada, no un
+    permiso; en caso de duda, la señal se investiga."""
+    entity_set = set(entity_refs)
+    for tombstone in tombstones:
+        if tombstone["signal_signature"] != signal_signature:
+            continue
+        if not entity_set & set(tombstone["entity_refs"]):
+            continue
+        valid_from = datetime.datetime.fromisoformat(tombstone["valid_from"])
+        valid_until = datetime.datetime.fromisoformat(tombstone["valid_until"])
+        if valid_from <= now <= valid_until:
+            return True
+    return False

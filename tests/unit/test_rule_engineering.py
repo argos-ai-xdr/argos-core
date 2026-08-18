@@ -126,3 +126,16 @@ def test_deployment_authorized_only_when_every_condition_holds():
         backtest_result=_LOW_VOLUME_BACKTEST, durable_approval_available=True,
     )
     assert result.allowed is True
+
+
+# ---------------------------------------------------------------------------
+# WazuhDecoderSpec (ADR-070, ARG-039): SPECIFIED / NOT_IMPLEMENTED a
+# propósito -- prueba que declara la ausencia, no que finge una capacidad.
+# ---------------------------------------------------------------------------
+
+
+def test_decoder_compiler_raises_not_implemented_honestly():
+    from rule_engineering import compile_decoder_spec_to_xml
+
+    with pytest.raises(NotImplementedError, match="NOT_IMPLEMENTED"):
+        compile_decoder_spec_to_xml({"decoder_spec_id": "decoderspec-t1"})

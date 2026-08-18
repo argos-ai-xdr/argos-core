@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from investigator import (
     InvalidContextLevel,
     InvalidThreatAssessment,
     build_threat_assessment,
+    is_signal_tombstoned,
     plan_next_context_level,
+    should_trigger_new_investigation,
 )
 
 
@@ -80,3 +84,92 @@ def test_threat_assessment_rejects_invalid_conclusion(contracts_path, context):
             contracts_path, context,
             investigation_refs=["inv-1"], conclusion="MAYBE_IDK", evidence_refs=["ev-1"],
         )
+
+
+# ---------------------------------------------------------------------------
+# should_trigger_new_investigation (ADR-070, DE-19): protección contra
+# bucle recursivo AI Candidate -> Kafka -> AI Candidate -> ...
+# ---------------------------------------------------------------------------
+
+
+def test_argos_candidate_never_triggers_new_investigation():
+    signal = {"source_mode": "CANDIDATE", "origin_system": "argos-ai"}
+    assert should_trigger_new_investigation(signal) is False
+
+
+@pytest.mark.parametrize(
+    "signal",
+    [
+        {"source_mode": "REAL", "origin_system": "wazuh"},
+        {"source_mode": "SYNTHETIC", "origin_system": "idlab-generator"},
+        {"source_mode": "CANDIDATE", "origin_system": "wazuh"},  # CANDIDATE de OTRO origen -- sí dispara
+        {"source_mode": "REAL"},  # sin origin_system -- no es el caso recursivo
+    ],
+)
+def test_other_combinations_trigger_investigation_normally(signal):
+    assert should_trigger_new_investigation(signal) is True
+
+
+# ---------------------------------------------------------------------------
+# is_signal_tombstoned (ADR-070, DE-23): supresión acotada, nunca global.
+# ---------------------------------------------------------------------------
+
+
+def _tombstone(*, entity_refs, signal_signature, valid_from, valid_until):
+    return {
+        "entity_refs": entity_refs, "signal_signature": signal_signature,
+        "valid_from": valid_from, "valid_until": valid_until,
+    }
+
+
+def test_matching_active_tombstone_suppresses():
+    now = datetime.datetime(2026, 8, 18, 13, 0, tzinfo=datetime.UTC)
+    tombstones = [_tombstone(
+        entity_refs=["asset-1"], signal_signature="sig-a",
+        valid_from="2026-08-18T12:00:00+00:00", valid_until="2026-08-25T12:00:00+00:00",
+    )]
+    assert is_signal_tombstoned(
+        entity_refs=["asset-1"], signal_signature="sig-a", tombstones=tombstones, now=now
+    ) is True
+
+
+def test_expired_tombstone_no_longer_suppresses():
+    now = datetime.datetime(2026, 9, 1, 0, 0, tzinfo=datetime.UTC)  # después de valid_until
+    tombstones = [_tombstone(
+        entity_refs=["asset-1"], signal_signature="sig-a",
+        valid_from="2026-08-18T12:00:00+00:00", valid_until="2026-08-25T12:00:00+00:00",
+    )]
+    assert is_signal_tombstoned(
+        entity_refs=["asset-1"], signal_signature="sig-a", tombstones=tombstones, now=now
+    ) is False
+
+
+def test_different_signal_signature_is_not_suppressed():
+    now = datetime.datetime(2026, 8, 18, 13, 0, tzinfo=datetime.UTC)
+    tombstones = [_tombstone(
+        entity_refs=["asset-1"], signal_signature="sig-a",
+        valid_from="2026-08-18T12:00:00+00:00", valid_until="2026-08-25T12:00:00+00:00",
+    )]
+    assert is_signal_tombstoned(
+        entity_refs=["asset-1"], signal_signature="sig-DIFFERENT", tombstones=tombstones, now=now
+    ) is False
+
+
+def test_no_entity_overlap_is_not_suppressed():
+    """Un tombstone acotado a asset-1 nunca suprime una señal sobre
+    asset-2, aunque comparta signal_signature -- nunca supresión global."""
+    now = datetime.datetime(2026, 8, 18, 13, 0, tzinfo=datetime.UTC)
+    tombstones = [_tombstone(
+        entity_refs=["asset-1"], signal_signature="sig-a",
+        valid_from="2026-08-18T12:00:00+00:00", valid_until="2026-08-25T12:00:00+00:00",
+    )]
+    assert is_signal_tombstoned(
+        entity_refs=["asset-2"], signal_signature="sig-a", tombstones=tombstones, now=now
+    ) is False
+
+
+def test_no_tombstones_is_never_suppressed():
+    now = datetime.datetime(2026, 8, 18, 13, 0, tzinfo=datetime.UTC)
+    assert is_signal_tombstoned(
+        entity_refs=["asset-1"], signal_signature="sig-a", tombstones=[], now=now
+    ) is False
