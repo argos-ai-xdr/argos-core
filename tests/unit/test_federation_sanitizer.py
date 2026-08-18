@@ -71,7 +71,7 @@ def test_removed_field_cannot_reappear_from_hidden_duplicate_metadata():
     (no hay "magia" que lo detecte), pero una vez la política declara
     ambas rutas, el valor no puede reaparecer en ningún lugar del
     payload liberado."""
-    secret = "analyst@example.com"
+    secret = "analyst@example.com"  # pragma: allowlist secret -- variable de prueba, no una credencial real
     payload = {"reporter_email": secret, "metadata": {"reporter_email_copy": secret}}
 
     partial_rules = (SanitizationRule(field_path="reporter_email", operation="REMOVE_FIELD"),)
