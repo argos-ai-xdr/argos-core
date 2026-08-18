@@ -169,3 +169,70 @@ def test_dedupe_then_group_produces_one_incident_worth_of_events_for_50_subproce
     incident = build_incident_payload(contracts_path, context, groups[0])
     assert incident["member_event_ids"] == ["falco-0"]
     assert len(incident["evidence_refs"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# CHAOS-20 (ADR-068, argos-control/adr/ADR-068-chaos-engineering-resilience-
+# validation.md): 50 eventos Falco de subproceso + reinicio del correlador a
+# mitad de la ventana de deduplicación -> sigue produciendo 1 único
+# Incident, ni 50 ni una fusión incorrecta de dos ataques distintos.
+#
+# dedupe_by_correlation_key es una función pura sin estado propio entre
+# invocaciones -- "reinicio a mitad de secuencia" no puede corromper nada
+# que no exista. Lo que SÍ hay que probar es la consecuencia real de eso:
+# si el correlador procesa un subconjunto de los eventos antes de caerse
+# (trabajo descartado, nunca comprometido) y, tras reiniciar, vuelve a
+# recibir el conjunto COMPLETO desde la fuente durable (NATS JetStream,
+# ADR-002 -- los eventos no se pierden, solo el trabajo en curso del
+# proceso), el resultado converge exactamente al mismo Incident que si
+# nunca hubiera habido interrupción. Esta es la propiedad de resiliencia
+# que ADR-068 pide dejar como regresión ejecutable, no solo como
+# argumento de que "la función es pura".
+# ---------------------------------------------------------------------------
+
+
+def test_chaos_20_dedup_survives_restart_mid_sequence():
+    events = [
+        _event(f"falco-{i}", "a1", f"2026-08-18T10:00:{i:02d}Z", "high", source="falco", correlation_key="attack-xyz")
+        for i in range(50)
+    ]
+
+    # Sin reinicio: procesar todo de una vez.
+    baseline = dedupe_by_correlation_key(events)
+
+    # Con "reinicio": el proceso ve los primeros 30, se cae (ese trabajo
+    # parcial se descarta -- dedupe_by_correlation_key no lo persiste en
+    # ningún sitio), y tras reiniciar vuelve a recibir el conjunto
+    # COMPLETO desde la fuente durable (redelivery de NATS JetStream).
+    _discarded_partial_work = dedupe_by_correlation_key(events[:30])  # nunca se compromete a ningún lado
+    after_restart = dedupe_by_correlation_key(events)  # redelivery completo tras reiniciar
+
+    assert len(baseline) == 1
+    assert len(after_restart) == 1
+    assert after_restart[0]["correlation"]["occurrence_count"] == 50
+    assert after_restart == baseline  # el reinicio no cambia el resultado final
+
+
+def test_chaos_20_restart_never_merges_two_distinct_attacks_even_when_interleaved():
+    """Mismo escenario que arriba, pero además interleaved con un SEGUNDO
+    ataque distinto que ocurre alrededor del mismo reinicio -- el
+    invariante de CHAOS-20 no es solo 'no perder eventos', es también 'no
+    fusionar dos incidentes reales por culpa de la interrupción'."""
+    attack_a = [
+        _event(f"a-{i}", "a1", f"2026-08-18T10:00:{i:02d}Z", "high", source="falco", correlation_key="attack-A")
+        for i in range(50)
+    ]
+    attack_b = [
+        _event(f"b-{i}", "a1", f"2026-08-18T10:00:{i:02d}Z", "critical", source="falco", correlation_key="attack-B")
+        for i in range(5)
+    ]
+    # Interleaved tal como podrían llegar realmente los dos ataques.
+    interleaved = sorted(attack_a + attack_b, key=lambda e: e["event_id"])
+
+    _partial_before_restart = dedupe_by_correlation_key(interleaved[:20])  # descartado, nunca comprometido
+    after_restart = dedupe_by_correlation_key(interleaved)  # redelivery completo
+
+    assert len(after_restart) == 2
+    by_key = {e["correlation"]["correlation_key"]: e for e in after_restart}
+    assert by_key["attack-A"]["correlation"]["occurrence_count"] == 50
+    assert by_key["attack-B"]["correlation"]["occurrence_count"] == 5
