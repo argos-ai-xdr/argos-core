@@ -25,11 +25,12 @@ import dataclasses
 from typing import Literal
 
 from argos_envelope import new_id_prefixed, utc_now_iso
+from semantic_conflict import SemanticConflict
+
 from federation.federated_artifact import FederatedArtifact, verify_content_hash
 from federation.ledger import ContentConflict, FederationLedger
 from federation.revocation import RevocationRegistry
 from federation.security_domain import SecurityDomain, federation_allowed, transfer_allowed
-from semantic_conflict import SemanticConflict
 
 FederationOutcome = Literal["ACCEPT", "QUARANTINE", "REJECT", "LOCAL_REVALIDATION_REQUIRED"]
 
